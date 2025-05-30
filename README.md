@@ -635,7 +635,7 @@ If you use TinyRL in your research, please cite:
 
 ## 📞 Support
 
-- 📧 Email: [dong.liu.dl2357@gmail.com](dong.liu.dl2357@gmail.com)
+- 📧 Email: [dong.liu.dl2357@gmail.com](dong.liu.dl2357@yale.edu)
 <!-- - 💬 Discord: [TinyRL Community](https://discord.gg/tinyrl) -->
 - 🐛 Issues: [GitHub Issues](https://github.com/NoakLiu/TinyRL/issues)
 <!-- - 📖 Documentation: [docs.tinyrl.org](https://docs.tinyrl.org) -->
