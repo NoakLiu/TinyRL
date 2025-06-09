@@ -913,7 +913,7 @@ for episode in range(5):
     steps = 0
     episode_reward = 0
     
-    print(f"\n=== Episode {{episode + 1}} ===")
+    print(f"\n=== Episode " + str(episode + 1) + " ===")
     
     # Simulate game steps
     for step in range(10):  # max 10 steps
@@ -924,9 +924,9 @@ for episode in range(5):
         # Simulate game response (mock)
         target = 42  # Fixed target for demo
         if guess == target:
-            feedback = f"Correct! Target was {{target}}"
+            feedback = f"Correct! Target was " + str(target)
             episode_reward = 100 - step
-            print(f"Step {{step + 1}}: Guess {{guess}} - {{feedback}}")
+            print(f"Step " + str(step + 1) + ": Guess " + str(guess) + " - " + feedback)
             break
         elif guess < target:
             feedback = "Too low"
@@ -936,10 +936,10 @@ for episode in range(5):
             episode_reward -= abs(guess - target) / 100
         
         current_guess = guess
-        print(f"Step {{step + 1}}: Guess {{guess}} - {{feedback}}")
+        print(f"Step " + str(step + 1) + ": Guess " + str(guess) + " - " + feedback)
         
         if step == 9:  # Last step
-            feedback = f"Game over! Target was {{target}}"
+            feedback = f"Game over! Target was " + str(target)
             print(feedback)
     
     # Record episode results
@@ -954,7 +954,7 @@ for episode in range(5):
     }}
     
     game_results.append(episode_result)
-    print(f"Episode Result: {{episode_result}}")
+    print(f"Episode Result: " + str(episode_result))
 
 # Calculate overall performance
 total_episodes = len(game_results)
@@ -976,10 +976,10 @@ with open('rl_performance_report.json', 'w') as f:
     json.dump(performance_report, f, indent=2)
 
 print(f"\n📊 Overall Performance Report:")
-print(f"Episodes: {{performance_report['total_episodes']}}")
-print(f"Avg Reward: {{performance_report['average_reward']}}")
-print(f"Avg Steps: {{performance_report['average_steps']}}")
-print(f"Success Rate: {{performance_report['success_rate'] * 100}}%")
+print(f"Episodes: " + str(performance_report['total_episodes']))
+print(f"Avg Reward: " + str(performance_report['average_reward']))
+print(f"Avg Steps: " + str(performance_report['average_steps']))
+print(f"Success Rate: " + str(performance_report['success_rate'] * 100) + "%")
 """
         
         print("🔧 Executing RL game episodes...")
