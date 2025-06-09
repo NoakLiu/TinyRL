@@ -38,66 +38,40 @@ A lightweight, powerful framework for building intelligent agents that execute c
 - Complex problem decomposition and solving
 - Shows emergent collaborative behaviors
 
-## 🚀 Quick Start
+## 🚀 Quick Start & Installation
 
 ### Prerequisites
 - Python 3.9+
-- Virtual environment (recommended)
+- Virtual environment manager (conda recommended, or venv)
+- Git
 
-### Installation
+### 🔧 Environment Setup & Installation
 
+Choose one of the following methods:
+
+#### Method 1: Using Conda (Recommended)
 ```bash
 # Clone the repository
 git clone https://github.com/NoakLiu/TinyRL.git
 cd TinyRL
 
-# Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Create conda environment with Python 3.9+
+conda create -n mcp_sandbox python=3.9 -y
+
+# Activate conda environment
+conda activate mcp_sandbox
 
 # Install dependencies
-pip install -r requirements.txt
-```
-
-### Running the Demo
-
-```bash
-# Run all three demo scenarios
-python run_demo.py
-```
-
-## 📋 Complete Running Guide
-
-### 1. 🔧 Environment Setup
-
-#### Step 1: Check Python Version
-```bash
-python --version  # Requires Python 3.9 or higher
-```
-
-#### Step 2: Create and Activate Virtual Environment
-```bash
-# Create virtual environment
-python -m venv mcp_env
-
-# Activate virtual environment (Linux/Mac)
-source mcp_env/bin/activate
-
-# Activate virtual environment (Windows)
-mcp_env\Scripts\activate
-```
-
-#### Step 3: Install Dependencies
-```bash
-# Install all required dependencies
 pip install -r requirements.txt
 
 # Verify installation
 python -c "import sys; print(f'Python: {sys.version}')"
 ```
 
-#### Step 4: Configure API Keys
-Create a `.env` file and add your API keys:
+```
+
+### 🔑 Configure API Keys
+Create a `.env` file in the project root and add your API keys:
 ```env
 # Configure at least one LLM API key
 OPENAI_API_KEY=sk-your-openai-key-here
@@ -107,17 +81,21 @@ MISTRAL_API_KEY=your-mistral-key-here
 
 # Optional: Local Llama models
 OLLAMA_BASE_URL=http://localhost:11434
+
+# Optional: Sandbox settings
+MAX_CONCURRENT_SANDBOXES=5
+SANDBOX_TIMEOUT=60
+SANDBOX_MAX_MEMORY_MB=1024
 ```
 
-### 2. 🚀 Basic Running Methods
+### 🚀 Running the Demo
 
-#### Method 1: Run Complete Demo
 ```bash
 # Run all three demo scenarios
 python run_demo.py
 ```
 
-#### Method 2: Interactive Python Usage
+#### Example: Interactive Python Usage
 ```python
 # Start Python interpreter
 python
@@ -136,7 +114,7 @@ results = asyncio.run(runner.run_all_demos())
 runner.print_summary(results)
 ```
 
-#### Method 3: Check System Status
+#### Example: Check System Status
 ```python
 # Check dependency status
 python -c "
@@ -147,7 +125,7 @@ check_dependencies()
 "
 ```
 
-### 3. 🎯 Advanced Usage Methods
+### 2. 🎯 Advanced Usage Methods
 
 #### Run Specific Demos Individually
 ```python
@@ -211,60 +189,83 @@ result = await agent.process_task(
 )
 ```
 
-### 4. 🐛 Troubleshooting Guide
+### 3. 🐛 Troubleshooting Guide
 
-#### Common Issues and Solutions
+#### Environment Issues
 
-**Issue 1: Import Errors**
+**Issue 1: Conda Environment Problems**
 ```bash
-# Symptom: ImportError or ModuleNotFoundError
-# Solution:
-python -c "import sys; print(sys.path)"
-pip install -r requirements.txt --force-reinstall
+# List conda environments
+conda env list
+
+# Remove and recreate environment
+conda env remove -n mcp_sandbox
+conda create -n mcp_sandbox python=3.9 -y
+conda activate mcp_sandbox
+pip install -r requirements.txt
 ```
 
-**Issue 2: API Key Errors**
+**Issue 2: Import Errors**
 ```bash
-# Symptom: Authentication failed
-# Solutions:
-# 1. Check if .env file exists
+# Check if environment is activated
+which python  # Should show conda/venv path
+
+# Reinstall dependencies
+pip install -r requirements.txt --force-reinstall
+
+# Check Python path
+python -c "import sys; print(sys.path)"
+```
+
+**Issue 3: API Key Errors**
+```bash
+# Check if .env file exists and is readable
 ls -la .env
+cat .env
 
-# 2. Verify environment variables
-python -c "import os; print('OPENAI_API_KEY' in os.environ)"
+# Verify environment variables are loaded
+python -c "
+import os
+from dotenv import load_dotenv
+load_dotenv()
+print('OPENAI_API_KEY loaded:', 'OPENAI_API_KEY' in os.environ)
+"
 
-# 3. Reset environment variables
+# Manually set environment variables
 export OPENAI_API_KEY="your-actual-key-here"
 ```
 
-**Issue 3: Sandbox Creation Failed**
+**Issue 4: Sandbox Creation Failed**
 ```bash
-# Symptom: Sandbox creation failed
-# Solutions:
-# 1. Check disk space
-df -h
+# Check available resources
+df -h  # Disk space
+free -h  # Memory (Linux)
 
-# 2. Verify Python version
-python --version
-
-# 3. Test virtual environment support
+# Test virtual environment creation
 python -m venv test_env && rm -rf test_env
+
+# Check permissions
+ls -la ./
 ```
 
-**Issue 4: Slow Demo Execution**
-```python
-# Symptom: Demo takes too long to run
-# Solution: Adjust configuration parameters
-from agents.sandbox import SandboxConfig
+#### Quick Fix Commands
+```bash
+# Complete environment reset (conda)
+conda deactivate
+conda env remove -n mcp_sandbox
+conda create -n mcp_sandbox python=3.9 -y
+conda activate mcp_sandbox
+pip install -r requirements.txt
 
-config = SandboxConfig(
-    timeout=30,  # Reduce timeout
-    max_memory_mb=512,  # Limit memory usage
-    enable_network=False  # Disable network access
-)
+# Complete environment reset (venv)
+deactivate
+rm -rf mcp_env
+python -m venv mcp_env
+source mcp_env/bin/activate  # Linux/Mac
+pip install -r requirements.txt
 ```
 
-### 5. 📊 Performance Optimization
+### 4. 📊 Performance Optimization
 
 #### Basic Optimization
 ```python
@@ -273,6 +274,7 @@ import os
 os.environ["MAX_CONCURRENT_SANDBOXES"] = "3"
 
 # 2. Optimize model parameters
+from models.llm_interface import ModelConfig
 model_config = ModelConfig(
     model_name="gpt-4o-mini",  # Use faster model
     max_tokens=1000,  # Limit output length
@@ -296,7 +298,7 @@ start_time = time.time()
 print(f"Execution time: {time.time() - start_time:.2f} seconds")
 ```
 
-### 6. 🎮 Interactive Usage Examples
+### 5. 🎮 Interactive Usage Examples
 
 #### Jupyter Notebook Usage
 ```python
@@ -320,10 +322,10 @@ for i, result in enumerate(results, 1):
 
 #### Command Line Shortcuts
 ```bash
-# Create run script
+# Create conda activation script
 cat > quick_run.sh << 'EOF'
 #!/bin/bash
-source venv/bin/activate
+conda activate mcp_sandbox
 python run_demo.py
 EOF
 
@@ -331,50 +333,19 @@ chmod +x quick_run.sh
 ./quick_run.sh
 ```
 
-### 7. 📚 Learning Path Recommendations
+### 6. 📚 Learning Path Recommendations
 
 1. **Beginners**: Start with `python run_demo.py` to understand basic functionality
 2. **Intermediate**: Read `demos/demo_runner.py` to understand implementation details
 3. **Developers**: Explore `agents/` and `models/` directories to learn architecture
 4. **Customization**: Modify configurations and create custom agents based on your needs
 
-### 8. 🔍 Verify Installation Success
-
-Run the following commands to verify everything is working:
-```bash
-# Complete verification script
-python -c "
-import sys
-print('Python Version:', sys.version)
-
-# Check main modules
-try:
-    from demos.demo_runner import MCPAgentDemoRunner
-    print('✅ Demo Module: OK')
-except ImportError as e:
-    print('❌ Demo Module:', e)
-
-try:
-    from models.llm_interface import MultiModelManager
-    print('✅ Model Interface: OK')
-except ImportError as e:
-    print('❌ Model Interface:', e)
-
-try:
-    from agents.sandbox import SandboxManager
-    print('✅ Sandbox Manager: OK')
-except ImportError as e:
-    print('❌ Sandbox Manager:', e)
-
-print('🎉 Verification Complete!')
-"
-```
-
-If all checks pass, you're ready to start using MCP Agent Sandbox!
-
-### 9. 🚀 Quick Test Commands
+### 7. 🚀 Quick Test Commands
 
 ```bash
+# Activate environment first
+conda activate mcp_sandbox  # or: source mcp_env/bin/activate
+
 # Test 1: Basic functionality
 python -c "from __init__ import check_dependencies; check_dependencies()"
 
