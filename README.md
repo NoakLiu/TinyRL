@@ -56,7 +56,7 @@ git clone https://github.com/NoakLiu/TinyRL.git
 cd TinyRL
 
 # Create conda environment with Python 3.9+
-conda create -n mcp_sandbox python=3.9 -y
+conda create -n mcp_sandbox python=3.10 -y
 
 # Activate conda environment
 conda activate mcp_sandbox
@@ -66,8 +66,6 @@ pip install -r requirements.txt
 
 # Verify installation
 python -c "import sys; print(f'Python: {sys.version}')"
-```
-
 ```
 
 ### 🔑 Configure API Keys
@@ -95,210 +93,240 @@ SANDBOX_MAX_MEMORY_MB=1024
 python run_demo.py
 ```
 
-#### Example: Interactive Python Usage
-```python
-# Start Python interpreter
-python
+## 🎯 After Running the Demo Successfully
 
-# Run in Python
+Congratulations! If you see all demos completed successfully, you're ready for the next steps.
+
+### 🔑 Get Real LLM Responses (Instead of Mock)
+
+The demo uses mock responses by default. To get real AI responses, configure your API keys:
+
+#### Step 1: Get API Keys
+- **OpenAI**: Visit [OpenAI API](https://platform.openai.com/api-keys)
+- **Anthropic**: Visit [Anthropic Console](https://console.anthropic.com/)
+- **Google**: Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+- **Mistral**: Visit [Mistral AI Console](https://console.mistral.ai/)
+
+#### Step 2: Update Your .env File
+```env
+# Replace with your actual API keys
+OPENAI_API_KEY=sk-your-real-openai-key-here
+ANTHROPIC_API_KEY=sk-ant-your-real-anthropic-key-here
+GOOGLE_AI_STUDIO_API_KEY=your-real-google-key-here
+MISTRAL_API_KEY=your-real-mistral-key-here
+```
+
+#### Step 3: Run Demo with Real APIs
+```bash
+# Activate your environment
+conda activate mcp_sandbox
+
+# Run demo with real API responses
+python run_demo.py
+```
+
+### 🛠️ Start Building Your Own Applications
+
+Now that the framework is working, here are some practical examples:
+
+#### Example 1: Data Analysis Assistant
+```python
 import asyncio
-from demos.demo_runner import MCPAgentDemoRunner
-
-# Create demo runner
-runner = MCPAgentDemoRunner()
-
-# Run all demos
-results = asyncio.run(runner.run_all_demos())
-
-# View results
-runner.print_summary(results)
-```
-
-#### Example: Check System Status
-```python
-# Check dependency status
-python -c "
-import sys
-sys.path.insert(0, '.')
-from __init__ import check_dependencies
-check_dependencies()
-"
-```
-
-### 2. 🎯 Advanced Usage Methods
-
-#### Run Specific Demos Individually
-```python
-import asyncio
-from demos.demo_runner import MCPAgentDemoRunner
-
-async def run_specific_demo():
-    runner = MCPAgentDemoRunner()
-    
-    # Run Demo 1: Single LLM + Single Sandbox
-    result1 = await runner.run_demo_1()
-    
-    # Run Demo 2: Single LLM + Dual Sandbox
-    result2 = await runner.run_demo_2()
-    
-    # Run Demo 3: Dual LLM + Single Sandbox
-    result3 = await runner.run_demo_3()
-    
-    return [result1, result2, result3]
-
-# Execute specific demo
-asyncio.run(run_specific_demo())
-```
-
-#### Custom Model Configuration
-```python
-from models.llm_interface import MultiModelManager, ModelConfig
-
-# Create custom model manager
-manager = MultiModelManager()
-
-# Add specific model configuration
-manager.add_model("my-gpt", ModelConfig(
-    model_name="gpt-4o",
-    api_key="your-key-here",
-    temperature=0.7,
-    max_tokens=4096
-))
-
-# Use custom model
-response = await manager.generate(
-    prompt="Explain the fundamentals of quantum computing",
-    model_name="my-gpt"
-)
-```
-
-#### Create Custom Agents
-```python
-from agents.manager_agent import ManagerAgent
+from models.llm_interface import MultiModelManager
 from agents.sandbox import SandboxManager
 
-# Create sandbox manager
-sandbox_manager = SandboxManager()
+async def analyze_data():
+    # Create managers
+    model_manager = MultiModelManager()
+    sandbox_manager = SandboxManager()
+    
+    # Create sandbox
+    sandbox = await sandbox_manager.create_sandbox()
+    
+    # Generate analysis code
+    prompt = """
+    Create a Python script that:
+    1. Generates sample sales data
+    2. Performs statistical analysis
+    3. Creates visualizations
+    4. Saves results to files
+    """
+    
+    response = await model_manager.generate(prompt, model_name="gpt-4o")
+    
+    # Execute in sandbox
+    result = await sandbox.execute_code(response)
+    print("Analysis completed:", result.success)
+    
+    # Cleanup
+    await sandbox_manager.cleanup_sandbox(sandbox.id)
 
-# Create manager agent
-agent = ManagerAgent(model_manager, sandbox_manager)
-
-# Execute specific task
-result = await agent.process_task(
-    "Analyze the given dataset and generate visualization charts"
-)
+# Run the analysis
+asyncio.run(analyze_data())
 ```
 
-### 3. 🐛 Troubleshooting Guide
-
-#### Environment Issues
-
-**Issue 1: Conda Environment Problems**
-```bash
-# List conda environments
-conda env list
-
-# Remove and recreate environment
-conda env remove -n mcp_sandbox
-conda create -n mcp_sandbox python=3.9 -y
-conda activate mcp_sandbox
-pip install -r requirements.txt
-```
-
-**Issue 2: Import Errors**
-```bash
-# Check if environment is activated
-which python  # Should show conda/venv path
-
-# Reinstall dependencies
-pip install -r requirements.txt --force-reinstall
-
-# Check Python path
-python -c "import sys; print(sys.path)"
-```
-
-**Issue 3: API Key Errors**
-```bash
-# Check if .env file exists and is readable
-ls -la .env
-cat .env
-
-# Verify environment variables are loaded
-python -c "
-import os
-from dotenv import load_dotenv
-load_dotenv()
-print('OPENAI_API_KEY loaded:', 'OPENAI_API_KEY' in os.environ)
-"
-
-# Manually set environment variables
-export OPENAI_API_KEY="your-actual-key-here"
-```
-
-**Issue 4: Sandbox Creation Failed**
-```bash
-# Check available resources
-df -h  # Disk space
-free -h  # Memory (Linux)
-
-# Test virtual environment creation
-python -m venv test_env && rm -rf test_env
-
-# Check permissions
-ls -la ./
-```
-
-#### Quick Fix Commands
-```bash
-# Complete environment reset (conda)
-conda deactivate
-conda env remove -n mcp_sandbox
-conda create -n mcp_sandbox python=3.9 -y
-conda activate mcp_sandbox
-pip install -r requirements.txt
-
-# Complete environment reset (venv)
-deactivate
-rm -rf mcp_env
-python -m venv mcp_env
-source mcp_env/bin/activate  # Linux/Mac
-pip install -r requirements.txt
-```
-
-### 4. 📊 Performance Optimization
-
-#### Basic Optimization
+#### Example 2: Web Development Assistant
 ```python
-# 1. Limit concurrent sandboxes
-import os
-os.environ["MAX_CONCURRENT_SANDBOXES"] = "3"
+async def create_web_app():
+    model_manager = MultiModelManager()
+    sandbox_manager = SandboxManager()
+    
+    sandbox = await sandbox_manager.create_sandbox()
+    
+    prompt = """
+    Create a simple Flask web application that:
+    1. Has a homepage with a form
+    2. Processes form data
+    3. Returns results as JSON
+    4. Includes basic error handling
+    """
+    
+    code = await model_manager.generate(prompt, model_name="claude-3.5-sonnet")
+    result = await sandbox.execute_code(code)
+    
+    print("Web app created:", result.success)
+    await sandbox_manager.cleanup_sandbox(sandbox.id)
 
-# 2. Optimize model parameters
-from models.llm_interface import ModelConfig
-model_config = ModelConfig(
-    model_name="gpt-4o-mini",  # Use faster model
-    max_tokens=1000,  # Limit output length
-    temperature=0.1   # Reduce randomness
-)
-
-# 3. Enable caching
-os.environ["ENABLE_RESPONSE_CACHE"] = "true"
+asyncio.run(create_web_app())
 ```
 
-#### Monitoring and Debugging
+### 📊 Monitor Your Usage
+
+Track your API usage and performance:
+
 ```python
-# Enable verbose logging
+# Enable detailed logging
 import logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
-# Performance monitoring
+# Monitor execution time
 import time
-start_time = time.time()
-# ... run your code ...
-print(f"Execution time: {time.time() - start_time:.2f} seconds")
+start = time.time()
+
+# Your code here
+result = await model_manager.generate("Your prompt", model_name="gpt-4o")
+
+execution_time = time.time() - start
+print(f"Execution time: {execution_time:.2f} seconds")
+print(f"Token usage: {result.usage if hasattr(result, 'usage') else 'N/A'}")
 ```
 
-### 5. 🎮 Interactive Usage Examples
+### 🎛️ Custom Configuration
+
+Create your own configuration for specific use cases:
+
+```python
+from models.llm_interface import ModelConfig
+
+# Custom model configuration
+custom_config = ModelConfig(
+    model_name="gpt-4o",
+    temperature=0.3,  # More deterministic
+    max_tokens=2000,  # Longer responses
+    timeout=30        # 30 second timeout
+)
+
+# Add to manager
+model_manager.add_model("my-custom-gpt", custom_config)
+
+# Use custom model
+response = await model_manager.generate(
+    "Complex analysis task", 
+    model_name="my-custom-gpt"
+)
+```
+
+### 📋 Quick Reference Commands
+
+Here are the most common commands you'll use:
+
+#### Basic Operations
+```bash
+# Activate environment
+conda activate mcp_sandbox
+
+# Run full demo
+python run_demo.py
+
+# Check system status
+python -c "from __init__ import check_dependencies; check_dependencies()"
+```
+
+#### Interactive Python Session
+```python
+# Quick start template
+import asyncio
+from models.llm_interface import MultiModelManager
+from agents.sandbox import SandboxManager
+
+async def main():
+    # Setup
+    model_manager = MultiModelManager()
+    sandbox_manager = SandboxManager()
+    sandbox = await sandbox_manager.create_sandbox()
+    
+    # Your code here
+    response = await model_manager.generate("Your prompt", model_name="gpt-4o")
+    result = await sandbox.execute_code(response)
+    
+    print("Success:", result.success)
+    print("Output:", result.output)
+    
+    # Cleanup
+    await sandbox_manager.cleanup_sandbox(sandbox.id)
+
+# Run it
+asyncio.run(main())
+```
+
+#### Common Use Cases
+```python
+# 1. Code Generation & Execution
+prompt = "Create a Python function to calculate fibonacci numbers"
+code = await model_manager.generate(prompt, model_name="gpt-4o")
+result = await sandbox.execute_code(code)
+
+# 2. Data Analysis
+prompt = "Analyze this CSV data and create visualizations"
+analysis_code = await model_manager.generate(prompt, model_name="claude-3.5-sonnet")
+analysis_result = await sandbox.execute_code(analysis_code)
+
+# 3. Multi-step Tasks
+step1 = await model_manager.generate("Generate sample data", model_name="gpt-4o")
+step2 = await model_manager.generate("Process the data from step 1", model_name="claude-3.5-sonnet")
+```
+
+### 🔧 Advanced Configuration
+
+#### Environment Variables
+```bash
+# Performance tuning
+export MAX_CONCURRENT_SANDBOXES=3
+export SANDBOX_TIMEOUT=60
+export ENABLE_RESPONSE_CACHE=true
+
+# Logging
+export LOG_LEVEL=INFO
+export ENABLE_DEBUG_MODE=false
+```
+
+#### Custom Sandbox Configuration
+```python
+from agents.sandbox import SandboxConfig
+
+custom_sandbox = SandboxConfig(
+    timeout=45,           # 45 second timeout
+    max_memory_mb=1024,   # 1GB memory limit
+    enable_network=True,  # Allow internet access
+    python_packages=["numpy", "pandas", "matplotlib"]  # Pre-install packages
+)
+
+sandbox = await sandbox_manager.create_sandbox(config=custom_sandbox)
+```
+
+## 📋 Complete Running Guide
+
+### 🎮 Interactive Usage Examples
 
 #### Jupyter Notebook Usage
 ```python
@@ -333,14 +361,14 @@ chmod +x quick_run.sh
 ./quick_run.sh
 ```
 
-### 6. 📚 Learning Path Recommendations
+### 📚 Learning Path Recommendations
 
 1. **Beginners**: Start with `python run_demo.py` to understand basic functionality
 2. **Intermediate**: Read `demos/demo_runner.py` to understand implementation details
 3. **Developers**: Explore `agents/` and `models/` directories to learn architecture
 4. **Customization**: Modify configurations and create custom agents based on your needs
 
-### 7. 🚀 Quick Test Commands
+### 🚀 Quick Test Commands
 
 ```bash
 # Activate environment first
