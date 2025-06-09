@@ -913,7 +913,7 @@ for episode in range(5):
     steps = 0
     episode_reward = 0
     
-    print(f"\n=== Episode " + str(episode + 1) + " ===")
+    print(f"\\n=== Episode " + str(episode + 1) + " ===")
     
     # Simulate game steps
     for step in range(10):  # max 10 steps
@@ -924,9 +924,9 @@ for episode in range(5):
         # Simulate game response (mock)
         target = 42  # Fixed target for demo
         if guess == target:
-            feedback = f"Correct! Target was " + str(target)
+            feedback = "Correct! Target was " + str(target)
             episode_reward = 100 - step
-            print(f"Step " + str(step + 1) + ": Guess " + str(guess) + " - " + feedback)
+            print("Step " + str(step + 1) + ": Guess " + str(guess) + " - " + feedback)
             break
         elif guess < target:
             feedback = "Too low"
@@ -936,10 +936,10 @@ for episode in range(5):
             episode_reward -= abs(guess - target) / 100
         
         current_guess = guess
-        print(f"Step " + str(step + 1) + ": Guess " + str(guess) + " - " + feedback)
+        print("Step " + str(step + 1) + ": Guess " + str(guess) + " - " + feedback)
         
         if step == 9:  # Last step
-            feedback = f"Game over! Target was " + str(target)
+            feedback = "Game over! Target was " + str(target)
             print(feedback)
     
     # Record episode results
