@@ -913,12 +913,12 @@ for episode in range(5):
     steps = 0
     episode_reward = 0
     
-    print(f"\\n=== Episode " + str(episode + 1) + " ===")
+    print(f"\n=== Episode " + str(episode + 1) + " ===")
     
     # Simulate game steps
     for step in range(10):  # max 10 steps
         # Agent chooses action based on state
-        state = {{'feedback': feedback, 'current_guess': current_guess}}
+        state = {'feedback': feedback, 'current_guess': current_guess}
         guess = agent.choose_action(state)
         
         # Simulate game response (mock)
@@ -944,14 +944,14 @@ for episode in range(5):
     
     # Record episode results
     metrics = agent.get_performance_metrics()
-    episode_result = {{
+    episode_result = {
         'episode': episode + 1,
         'total_reward': round(episode_reward, 2),
         'steps_taken': len(agent.history),
         'final_guess': agent.history[-1] if agent.history else None,
         'efficiency': metrics['efficiency'],
         'strategy': metrics['strategy']
-    }}
+    }
     
     game_results.append(episode_result)
     print(f"Episode Result: " + str(episode_result))
@@ -962,24 +962,24 @@ avg_reward = sum(r['total_reward'] for r in game_results) / total_episodes
 avg_steps = sum(r['steps_taken'] for r in game_results) / total_episodes
 success_rate = sum(1 for r in game_results if r['total_reward'] > 50) / total_episodes
 
-performance_report = {{
+performance_report = {
     'total_episodes': total_episodes,
     'average_reward': round(avg_reward, 2),
     'average_steps': round(avg_steps, 2), 
     'success_rate': round(success_rate, 2),
     'strategy_effectiveness': 'High' if success_rate > 0.7 else 'Medium',
     'episodes': game_results
-}}
+}
 
 # Save performance report
 with open('rl_performance_report.json', 'w') as f:
     json.dump(performance_report, f, indent=2)
 
-print(f"\n📊 Overall Performance Report:")
-print(f"Episodes: " + str(performance_report['total_episodes']))
-print(f"Avg Reward: " + str(performance_report['average_reward']))
-print(f"Avg Steps: " + str(performance_report['average_steps']))
-print(f"Success Rate: " + str(performance_report['success_rate'] * 100) + "%")
+print("\n📊 Overall Performance Report:")
+print("Episodes: " + str(performance_report['total_episodes']))
+print("Avg Reward: " + str(performance_report['average_reward']))
+print("Avg Steps: " + str(performance_report['average_steps']))
+print("Success Rate: " + str(performance_report['success_rate'] * 100) + "%")
 """
         
         print("🔧 Executing RL game episodes...")
