@@ -86,7 +86,151 @@ SANDBOX_TIMEOUT=60
 SANDBOX_MAX_MEMORY_MB=1024
 ```
 
-### 🚀 Running the Demo
+## 🆓 Using Free Open Source Models
+
+**Good news!** You can use completely free open source models without any API keys:
+
+### Option 1: Ollama (Recommended for beginners)
+
+#### Install Ollama
+```bash
+# Install Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Pull free models
+ollama pull qwen2.5:7b
+ollama pull qwen2.5-coder:7b
+ollama pull llama3.1:8b
+ollama pull codellama:7b
+```
+
+#### Update your .env file
+```env
+# No API keys needed!
+OLLAMA_BASE_URL=http://localhost:11434
+```
+
+#### Test with free models
+```python
+# Test Qwen 2.5 (great for coding)
+python -c "
+import asyncio
+from models.llm_interface import MultiModelManager
+
+async def test():
+    manager = MultiModelManager()
+    response = await manager.generate(
+        'Write a Python function to calculate fibonacci numbers',
+        model_name='qwen2.5-coder'
+    )
+    print(response)
+
+asyncio.run(test())
+"
+```
+
+### Option 2: Hugging Face Models (Direct GPU/CPU)
+
+#### Install additional dependencies
+```bash
+# Install PyTorch and Transformers
+pip install torch transformers accelerate bitsandbytes
+```
+
+#### Configure for your hardware
+```env
+# Hardware configuration
+HF_DEVICE=auto  # auto, cpu, cuda
+HF_LOAD_IN_8BIT=true  # Save memory on GPU
+```
+
+#### Available free models
+```python
+# Test GPT-2 (small, fast, completely free)
+response = await manager.generate(
+    "Explain Python functions",
+    model_name="gpt2"
+)
+
+# Test Qwen 2.5 7B (better quality, needs more memory)
+response = await manager.generate(
+    "Write a sorting algorithm",
+    model_name="qwen-7b"
+)
+
+# Test Code Llama (specialized for coding)
+response = await manager.generate(
+    "Create a REST API in Python",
+    model_name="codellama-7b"
+)
+```
+
+### Option 3: Local API Servers
+
+#### Using vLLM (for high performance)
+```bash
+# Install vLLM
+pip install vllm
+
+# Start server with Qwen model
+python -m vllm.entrypoints.openai.api_server \
+    --model Qwen/Qwen2.5-7B-Instruct \
+    --port 8000
+
+# Configure in .env
+VLLM_BASE_URL=http://localhost:8000
+VLLM_MODEL_NAME=Qwen/Qwen2.5-7B-Instruct
+```
+
+### 🎯 Recommended Free Models
+
+| Model | Best For | Memory | Speed |
+|-------|----------|---------|-------|
+| `gpt2` | Learning, testing | 500MB | ⚡⚡⚡ |
+| `qwen2.5-coder` | Code generation | 4GB | ⚡⚡ |
+| `qwen-7b` | General tasks | 7GB | ⚡ |
+| `codellama-7b` | Code understanding | 7GB | ⚡ |
+
+### 🔧 Memory Optimization Tips
+
+```python
+# For limited GPU memory
+ModelConfig(
+    model_name="qwen-7b",
+    device="auto",
+    load_in_8bit=True,  # Reduces memory by ~50%
+    max_tokens=1000     # Limit output length
+)
+
+# For CPU-only systems
+ModelConfig(
+    model_name="gpt2",
+    device="cpu",
+    max_tokens=512
+)
+```
+
+### ⚡ Quick Start with Free Models
+
+```bash
+# 1. Install Ollama models (easiest)
+ollama pull qwen2.5-coder:7b
+
+# 2. Test immediately
+python -c "
+import asyncio
+from demos.demo_runner import MCPAgentDemoRunner
+
+async def test_free():
+    runner = MCPAgentDemoRunner()
+    # This will now use free Qwen models!
+    await runner.run_demo_1()
+
+asyncio.run(test_free())
+"
+```
+
+## 🚀 Running the Demo
 
 ```bash
 # Run all three demo scenarios
