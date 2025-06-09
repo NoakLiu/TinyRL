@@ -8,15 +8,40 @@ import asyncio
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
-import openai
-import anthropic
-import google.generativeai as genai
-from mistralai.client import MistralClient
 import requests
 import json
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Try to import commercial API libraries, but make them optional
+try:
+    import openai
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+    logger.info("OpenAI library not available. GPT models will not be available.")
+
+try:
+    import anthropic
+    ANTHROPIC_AVAILABLE = True
+except ImportError:
+    ANTHROPIC_AVAILABLE = False
+    logger.info("Anthropic library not available. Claude models will not be available.")
+
+try:
+    import google.generativeai as genai
+    GOOGLE_AVAILABLE = True
+except ImportError:
+    GOOGLE_AVAILABLE = False
+    logger.info("Google AI library not available. Gemini models will not be available.")
+
+try:
+    from mistralai.client import MistralClient
+    MISTRAL_AVAILABLE = True
+except ImportError:
+    MISTRAL_AVAILABLE = False
+    logger.info("Mistral library not available. Mistral models will not be available.")
 
 @dataclass
 class ModelConfig:
@@ -52,6 +77,8 @@ class GPTClient(BaseLLM):
     
     def __init__(self, config: ModelConfig):
         super().__init__(config)
+        if not OPENAI_AVAILABLE:
+            raise ImportError("OpenAI library not installed. Run: pip install openai")
         self.client = openai.OpenAI(api_key=config.api_key)
         
     async def generate(self, prompt: str, system_prompt: Optional[str] = None) -> str:
@@ -100,6 +127,8 @@ class ClaudeClient(BaseLLM):
     
     def __init__(self, config: ModelConfig):
         super().__init__(config)
+        if not ANTHROPIC_AVAILABLE:
+            raise ImportError("Anthropic library not installed. Run: pip install anthropic")
         self.client = anthropic.Anthropic(api_key=config.api_key)
         
     async def generate(self, prompt: str, system_prompt: Optional[str] = None) -> str:
@@ -138,6 +167,8 @@ class GeminiClient(BaseLLM):
     
     def __init__(self, config: ModelConfig):
         super().__init__(config)
+        if not GOOGLE_AVAILABLE:
+            raise ImportError("Google AI library not installed. Run: pip install google-generativeai")
         genai.configure(api_key=config.api_key)
         self.model = genai.GenerativeModel(config.model_name)
         
@@ -185,6 +216,8 @@ class MistralClient(BaseLLM):
     
     def __init__(self, config: ModelConfig):
         super().__init__(config)
+        if not MISTRAL_AVAILABLE:
+            raise ImportError("Mistral library not installed. Run: pip install mistralai")
         self.client = MistralClient(api_key=config.api_key)
         
     async def generate(self, prompt: str, system_prompt: Optional[str] = None) -> str:
