@@ -22,11 +22,13 @@ logger = logging.getLogger(__name__)
 class ModelConfig:
     """Configuration for different LLM models"""
     model_name: str
-    api_key: str
+    api_key: str = ""  # Made optional for open source models
     base_url: Optional[str] = None
     max_tokens: int = 4096
     temperature: float = 0.7
     timeout: int = 60
+    device: str = "auto"  # For local models: "cpu", "cuda", "auto"
+    load_in_8bit: bool = False  # For memory optimization
 
 class BaseLLM(ABC):
     """Base class for all LLM implementations"""
@@ -286,6 +288,228 @@ class LlamaClient(BaseLLM):
             logger.error(f"Llama sync generation error: {e}")
             raise
 
+class HuggingFaceClient(BaseLLM):
+    """Hugging Face Transformers client for open source models"""
+    
+    def __init__(self, config: ModelConfig):
+        super().__init__(config)
+        try:
+            from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+            import torch
+            self.tokenizer = None
+            self.model = None
+            self.pipeline = None
+            
+            # Set device
+            if config.device == "auto":
+                self.device = "cuda" if torch.cuda.is_available() else "cpu"
+            else:
+                self.device = config.device
+                
+            logger.info(f"Using device: {self.device}")
+            
+        except ImportError:
+            logger.error("Transformers library not installed. Run: pip install transformers torch")
+            raise
+    
+    def _load_model(self):
+        """Lazy load model to save memory"""
+        if self.pipeline is None:
+            try:
+                from transformers import pipeline
+                import torch
+                
+                # Load model with memory optimization
+                model_kwargs = {
+                    "device_map": "auto" if self.device == "cuda" else None,
+                    "torch_dtype": torch.float16 if self.device == "cuda" else torch.float32,
+                }
+                
+                if self.config.load_in_8bit and self.device == "cuda":
+                    model_kwargs["load_in_8bit"] = True
+                
+                self.pipeline = pipeline(
+                    "text-generation",
+                    model=self.config.model_name,
+                    tokenizer=self.config.model_name,
+                    **model_kwargs
+                )
+                logger.info(f"Model {self.config.model_name} loaded successfully")
+                
+            except Exception as e:
+                logger.error(f"Failed to load model {self.config.model_name}: {e}")
+                raise
+    
+    async def generate(self, prompt: str, system_prompt: Optional[str] = None) -> str:
+        try:
+            return await asyncio.to_thread(self.generate_sync, prompt, system_prompt)
+        except Exception as e:
+            logger.error(f"HuggingFace async generation error: {e}")
+            raise
+    
+    def generate_sync(self, prompt: str, system_prompt: Optional[str] = None) -> str:
+        try:
+            self._load_model()
+            
+            # Format prompt
+            full_prompt = prompt
+            if system_prompt:
+                full_prompt = f"System: {system_prompt}\nUser: {prompt}\nAssistant:"
+            
+            # Generate response
+            outputs = self.pipeline(
+                full_prompt,
+                max_new_tokens=self.config.max_tokens,
+                temperature=self.config.temperature,
+                do_sample=True,
+                pad_token_id=self.pipeline.tokenizer.eos_token_id,
+                return_full_text=False
+            )
+            
+            return outputs[0]["generated_text"].strip()
+            
+        except Exception as e:
+            logger.error(f"HuggingFace sync generation error: {e}")
+            raise
+
+class QwenClient(BaseLLM):
+    """Qwen model client (can work with Ollama or direct API)"""
+    
+    def __init__(self, config: ModelConfig):
+        super().__init__(config)
+        self.base_url = config.base_url or "http://localhost:11434"
+        
+    async def generate(self, prompt: str, system_prompt: Optional[str] = None) -> str:
+        try:
+            # Format for Qwen models
+            if system_prompt:
+                formatted_prompt = f"<|im_start|>system\n{system_prompt}<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n"
+            else:
+                formatted_prompt = f"<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n"
+                
+            payload = {
+                "model": self.config.model_name,
+                "prompt": formatted_prompt,
+                "stream": False,
+                "options": {
+                    "temperature": self.config.temperature,
+                    "num_predict": self.config.max_tokens,
+                    "stop": ["<|im_end|>"]
+                }
+            }
+            
+            response = await asyncio.to_thread(
+                requests.post,
+                f"{self.base_url}/api/generate",
+                json=payload,
+                timeout=self.config.timeout
+            )
+            
+            return response.json()["response"].strip()
+        except Exception as e:
+            logger.error(f"Qwen generation error: {e}")
+            raise
+    
+    def generate_sync(self, prompt: str, system_prompt: Optional[str] = None) -> str:
+        try:
+            # Format for Qwen models
+            if system_prompt:
+                formatted_prompt = f"<|im_start|>system\n{system_prompt}<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n"
+            else:
+                formatted_prompt = f"<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n"
+                
+            payload = {
+                "model": self.config.model_name,
+                "prompt": formatted_prompt,
+                "stream": False,
+                "options": {
+                    "temperature": self.config.temperature,
+                    "num_predict": self.config.max_tokens,
+                    "stop": ["<|im_end|>"]
+                }
+            }
+            
+            response = requests.post(
+                f"{self.base_url}/api/generate",
+                json=payload,
+                timeout=self.config.timeout
+            )
+            
+            return response.json()["response"].strip()
+        except Exception as e:
+            logger.error(f"Qwen sync generation error: {e}")
+            raise
+
+class OpenSourceAPIClient(BaseLLM):
+    """Generic client for OpenAI-compatible APIs (like vLLM, Text Generation WebUI, etc.)"""
+    
+    def __init__(self, config: ModelConfig):
+        super().__init__(config)
+        self.base_url = config.base_url or "http://localhost:8000"
+        
+    async def generate(self, prompt: str, system_prompt: Optional[str] = None) -> str:
+        try:
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
+            
+            payload = {
+                "model": self.config.model_name,
+                "messages": messages,
+                "max_tokens": self.config.max_tokens,
+                "temperature": self.config.temperature,
+                "stream": False
+            }
+            
+            headers = {"Content-Type": "application/json"}
+            if self.config.api_key:
+                headers["Authorization"] = f"Bearer {self.config.api_key}"
+            
+            response = await asyncio.to_thread(
+                requests.post,
+                f"{self.base_url}/v1/chat/completions",
+                json=payload,
+                headers=headers,
+                timeout=self.config.timeout
+            )
+            
+            return response.json()["choices"][0]["message"]["content"]
+        except Exception as e:
+            logger.error(f"OpenSource API generation error: {e}")
+            raise
+    
+    def generate_sync(self, prompt: str, system_prompt: Optional[str] = None) -> str:
+        try:
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
+            
+            payload = {
+                "model": self.config.model_name,
+                "messages": messages,
+                "max_tokens": self.config.max_tokens,
+                "temperature": self.config.temperature,
+                "stream": False
+            }
+            
+            headers = {"Content-Type": "application/json"}
+            if self.config.api_key:
+                headers["Authorization"] = f"Bearer {self.config.api_key}"
+            
+            response = requests.post(
+                f"{self.base_url}/v1/chat/completions",
+                json=payload,
+                headers=headers,
+                timeout=self.config.timeout
+            )
+            
+            return response.json()["choices"][0]["message"]["content"]
+        except Exception as e:
+            logger.error(f"OpenSource API sync generation error: {e}")
+            raise
+
 class ModelFactory:
     """Factory for creating different LLM clients"""
     
@@ -304,6 +528,35 @@ class ModelFactory:
         "llama3.1": LlamaClient,
         "llama3.2": LlamaClient,
         "codellama": LlamaClient,
+        # Open Source Models
+        "qwen2.5": QwenClient,
+        "qwen2.5-coder": QwenClient,
+        "qwen2": QwenClient,
+        "qwen-coder": QwenClient,
+        "codeqwen": QwenClient,
+        # Hugging Face models
+        "microsoft/DialoGPT-medium": HuggingFaceClient,
+        "microsoft/DialoGPT-large": HuggingFaceClient,
+        "gpt2": HuggingFaceClient,
+        "gpt2-medium": HuggingFaceClient,
+        "gpt2-large": HuggingFaceClient,
+        "gpt2-xl": HuggingFaceClient,
+        "distilgpt2": HuggingFaceClient,
+        "Qwen/Qwen2.5-7B-Instruct": HuggingFaceClient,
+        "Qwen/Qwen2.5-14B-Instruct": HuggingFaceClient,
+        "Qwen/Qwen2.5-Coder-7B-Instruct": HuggingFaceClient,
+        "deepseek-ai/deepseek-coder-6.7b-instruct": HuggingFaceClient,
+        "WizardLM/WizardCoder-Python-7B-V1.0": HuggingFaceClient,
+        "codellama/CodeLlama-7b-Instruct-hf": HuggingFaceClient,
+        "codellama/CodeLlama-13b-Instruct-hf": HuggingFaceClient,
+        # OpenAI-compatible API servers
+        "vllm": OpenSourceAPIClient,
+        "text-generation-webui": OpenSourceAPIClient,
+        "localai": OpenSourceAPIClient,
+        # Generic mappings
+        "huggingface": HuggingFaceClient,
+        "qwen": QwenClient,
+        "opensourceapi": OpenSourceAPIClient,
     }
     
     @classmethod
@@ -411,6 +664,78 @@ def create_model_manager_from_env() -> MultiModelManager:
             model_name="llama3.1",
             api_key="",  # Not needed for Ollama
             base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        ))
+    
+    # Qwen models (via Ollama)
+    manager.add_model("qwen2.5", ModelConfig(
+        model_name="qwen2.5",
+        api_key="",
+        base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    ))
+    
+    manager.add_model("qwen2.5-coder", ModelConfig(
+        model_name="qwen2.5-coder",
+        api_key="",
+        base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    ))
+    
+    # Free Hugging Face models (CPU/GPU)
+    device = os.getenv("HF_DEVICE", "auto")  # auto, cpu, cuda
+    load_in_8bit = os.getenv("HF_LOAD_IN_8BIT", "false").lower() == "true"
+    
+    # GPT-2 (completely free)
+    manager.add_model("gpt2", ModelConfig(
+        model_name="gpt2",
+        api_key="",
+        device=device,
+        load_in_8bit=load_in_8bit,
+        max_tokens=512  # GPT-2 has smaller context
+    ))
+    
+    manager.add_model("gpt2-large", ModelConfig(
+        model_name="gpt2-large",
+        api_key="",
+        device=device,
+        load_in_8bit=load_in_8bit,
+        max_tokens=1024
+    ))
+    
+    # Qwen Instruct models (free via HuggingFace)
+    manager.add_model("qwen-7b", ModelConfig(
+        model_name="Qwen/Qwen2.5-7B-Instruct",
+        api_key="",
+        device=device,
+        load_in_8bit=load_in_8bit
+    ))
+    
+    manager.add_model("qwen-coder-7b", ModelConfig(
+        model_name="Qwen/Qwen2.5-Coder-7B-Instruct",
+        api_key="",
+        device=device,
+        load_in_8bit=load_in_8bit
+    ))
+    
+    # Code-specific models
+    manager.add_model("codellama-7b", ModelConfig(
+        model_name="codellama/CodeLlama-7b-Instruct-hf",
+        api_key="",
+        device=device,
+        load_in_8bit=load_in_8bit
+    ))
+    
+    # OpenAI-compatible local servers
+    if os.getenv("VLLM_BASE_URL"):
+        manager.add_model("vllm-local", ModelConfig(
+            model_name=os.getenv("VLLM_MODEL_NAME", "local-model"),
+            api_key="",
+            base_url=os.getenv("VLLM_BASE_URL")
+        ))
+    
+    if os.getenv("TEXT_GENERATION_WEBUI_URL"):
+        manager.add_model("webui-local", ModelConfig(
+            model_name=os.getenv("WEBUI_MODEL_NAME", "local-model"),
+            api_key="",
+            base_url=os.getenv("TEXT_GENERATION_WEBUI_URL")
         ))
     
     return manager 

@@ -5,6 +5,13 @@ anthropic>=0.7.0
 google-generativeai>=0.3.0
 mistralai>=0.1.0
 
+# Open Source Model Support
+torch>=2.0.0
+transformers>=4.35.0
+accelerate>=0.21.0
+bitsandbytes>=0.41.0  # For 8-bit quantization
+sentencepiece>=0.1.99  # For some tokenizers
+
 # Web and HTTP
 requests>=2.31.0
 beautifulsoup4>=4.12.0
